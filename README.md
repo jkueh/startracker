@@ -9,5 +9,6 @@ At the moment, it's just a small tool that gets the events for a given consignme
 
 Usage:  
 `ruby startracker.rb [consignmentNumber]`  
-Where "consignmentNumber" is the consignment number, or tracking code of the package being delivered to you.  
-If you have a valid ruby binary in `/usr/bin/ruby`, you can use `./startracker.rb [consignmentNumber]`
+Where "consignmentNumber" is the consignment number, or tracking code of the package being delivered to you.
+
+*NIX Users that have a valid ruby binary in `/usr/bin/ruby`, you can use `./startracker.rb [consignmentNumber]`
