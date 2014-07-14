@@ -1,8 +1,10 @@
 #!/usr/bin/ruby
 require 'json'
 require 'net/http'
+require 'date'
 
 consignmentNumber = ARGV[0]
+date = Date::today
 if consignmentNumber == nil
 	puts "Please enter a consignment number."
 	exit 1
@@ -12,6 +14,9 @@ guid = JSON.parse(Net::HTTP.get(
 	"/Consignment/GetConsignmentsBySearchCriteriaShort/#{consignmentNumber}"
 ))
 begin
+	printf "Events for consignment number #{consignmentNumber} as at "
+	printf "%4i-%02i-%02i",date.year,date.month,date.mday
+	printf ":\n"
 	events = JSON.parse(Net::HTTP.get(
 		"sttrackandtrace.startrack.com.au",
 		"/Consignment/GetConsignmentEventsByConsignmentGuid/#{guid[0]}"
