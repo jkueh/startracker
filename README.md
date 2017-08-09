@@ -7,7 +7,7 @@ It parses the response given by the webpage provided by StarTrack for use on
 their tracking page, and outputs it to Ruby's terminal output.
 
 ## Usage
-`ruby startracker.rb consignment_number`  
+`startracker.rb consignment_number`  
 Where "consignment_number" is the consignment number, or tracking code of the
 package being delivered.
 
