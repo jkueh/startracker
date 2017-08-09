@@ -1,73 +1,74 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 require 'json'
-require 'net/http'
 require 'date'
+require 'httparty'
 
 # Variable Declarations
-consignmentNumber = ARGV[0]
+consignment_number = ARGV[0]
 date = Date::today
-ERROR_PREFIX = "[ERROR]"
-ERROR_CONNECTION = "#{ERROR_PREFIX} There was an error connecting to the \
-server. Please check your Internetion connection."
-ERROR_RESPONSE = "#{ERROR_PREFIX} Invalid response from server. Please check \
-that the consignment number is valid."
-ERROR_NOCONSIGNNUM = "#{ERROR_PREFIX} Please enter a valid consignment number."
 
-# Some handy-dandy functions
-def error_noConsignNum
-	puts  ERROR_NOCONSIGNNUM
-	exit 1
-end
-def error_connection
-	puts ERROR_CONNECTION
-	exit 2
-end
-def error_response
-	puts ERROR_RESPONSE
-	exit 3
+API_BASE = 'https://sttrackandtrace.startrack.com.au'
+
+# Check that we've actually been provided with a consignment number
+if consignment_number.nil?
+  $stderr.puts "No consignment number provided - Exiting."
+  puts "#{ARGV.inspect}"
+  exit 1
 end
 
-# Validation
-if consignmentNumber == nil
-	error_noConsignNum
+# Simple GET handler
+def api_call(endpoint: '/')
+  response = HTTParty.get(
+    "#{API_BASE}#{endpoint}"
+  )
+  response_data = response.body.nil? ? nil : JSON.parse(
+    response.body,
+    symbolize_names: true
+  )
+  return {
+    :response => response,
+    :data => response_data
+  }
 end
 
-def decode_response(host,uri)
-	begin
-		result = Net::HTTP.get(host,uri)
-	rescue SocketError
-		error_connection
-	end
-	begin
-		result = JSON.parse(result)
-	rescue JSON::ParserError
-		error_response
-	end
-	return result
-end
-
-# Stop yakking and get on with it
+# Quit yakking and get on with it
 begin
-	guid = decode_response("sttrackandtrace.startrack.com.au",
-		"/Consignment/GetConsignmentsBySearchCriteriaShort/#{consignmentNumber}"
-	)
-	events = decode_response("sttrackandtrace.startrack.com.au",
-		"/Consignment/GetConsignmentEventsByConsignmentGuid/#{guid[0]}"
-	)
-	printf "Events for consignment number #{consignmentNumber} as at "
-	printf "%4i-%02i-%02i",date.year,date.month,date.mday
-	printf ":\n"
-	events.each {
-		|event|
-		output = "#{event['EventDate']} @ #{event['Time']}\t#{event['Status']}"
-		if event['Location'] == ""
-			puts output
-		else
-			puts "#{output} at #{event['Location']}"
-		end
-	}
+  # guid - An ID assigned to every Startrack consignment number... I think.
+  guid_data = api_call(
+    endpoint: "/Consignment/GetConsignmentsBySearchCriteriaShort"\
+              "/#{consignment_number}"
+  )[:data]
+
+  if guid_data.empty?
+    $stderr.puts  "Unable to fetch the GUID of the consignment - Double check "\
+                  "that you have a valid consignment number."
+    exit 4
+  end
+  # From what I can remember, it gets placed in an single-element array for
+  # some reason.
+  guid = guid_data.first
+
+  events = api_call(
+    endpoint: "/Consignment/GetConsignmentEventsByConsignmentGuid/#{guid}"
+  )
+
+  date_str = sprintf("%4i-%02i-%02i",
+    date.year,
+    date.month,
+    date.mday
+  )
+  puts  "Events for consignment number '#{consignment_number}' as at "\
+        "#{date_str}:"
+
+  events.each { |event|
+    event_str = "#{event['EventDate']} @ #{event['Time']}: #{event['Status']}"
+    if event['Location'].nil? || event['Location'].empty?
+      puts event_str
+    else
+      puts "#{event_str}, at #{event['Location']}"
+    end
+  }
 rescue => e
-	puts "#{ERROR_PREFIX} \
-#{e.class}: #{e.message}"
-	exit 4
+  puts "[ERROR] #{e.to_s}"
+  exit 4
 end
